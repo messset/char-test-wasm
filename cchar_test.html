@@ -1,0 +1,38 @@
+<script>
+     const memory = new WebAssembly.Memory({ initial: 256, maximum: 512 });
+     const buffer = new Uint8Array(memory.buffer);
+     var exports;
+
+     function toJsStr(offset) {
+         var s = "";
+         for (; ;) {
+             var b = buffer[offset++];
+             if (b == 0)
+                 return s;
+             s += String.fromCharCode(b);
+         }
+     }
+
+     function print(offset) {
+         console.log(toJsStr(offset));
+     }
+
+
+     fetch('cchar_test.wasm').then(response =>
+         response.arrayBuffer()
+     ).then(bytes => {
+         var imports = {};
+         imports.env = {};
+         imports.env.memory = memory;
+         imports.env.memoryBase = 0;
+         imports.env.table = new WebAssembly.Table({ initial: 0, maximum: 0, element: 'anyfunc' });
+         imports.env.tableBase = 0;
+         imports.env._print = print;
+         return WebAssembly.instantiate(bytes, imports);
+     }
+         ).then(module => {
+             exports = module.instance.exports;
+             exports._enterFunc();
+         }
+         );
+</script>
